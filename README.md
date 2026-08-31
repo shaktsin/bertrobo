@@ -24,7 +24,19 @@ python3 -m venv .venv
 
 `demo` is deliberately simulation-only. It never opens a serial port or drives GPIO.
 
-For Pi installation and the hardware checklist, see [docs/setup-pi.md](docs/setup-pi.md) and [docs/hardware.md](docs/hardware.md). The complete source conversation and the execution sequence are in [docs/shared-chat-transcript.md](docs/shared-chat-transcript.md) and [docs/implementation-plan.md](docs/implementation-plan.md).
+## Stage 1 text chat
+
+Create an OpenAI API key, then set it only in the Pi shell (never commit it):
+
+```sh
+export OPENAI_API_KEY="your_api_key"
+export BERTROBO_MODEL="gpt-5-mini" # optional; this is the default
+.venv/bin/python -m bertrobo chat
+```
+
+Type a message, then use `quit` or Ctrl-C to leave. This chat is text-only and has no access to hardware actions, tools, or persistent memory.
+
+For Pi installation and the hardware checklist, see [docs/setup-pi.md](docs/setup-pi.md) and [docs/hardware.md](docs/hardware.md). The project’s canonical [design](docs/design.md), [goals](docs/goals.md), and [10-stage implementation plan](docs/implementation-plan.md) define the build order. The complete source conversation remains in [docs/shared-chat-transcript.md](docs/shared-chat-transcript.md).
 
 ## Safety boundary
 

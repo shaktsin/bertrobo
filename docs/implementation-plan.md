@@ -1,94 +1,67 @@
-# Detailed robot build plan
+# 10-stage implementation plan
 
-This turns the shared chat into an executable plan. Complete each exit check before buying or integrating the next stage. Prices and local-stock claims in the transcript are snapshots only; use current listings when purchasing.
+The stages below are the authoritative build order. Advance only after the listed demonstration works reliably.
 
-## Stage 0 — Safety and project setup
+## 1. Brain
 
-1. Read the [hardware plan](hardware.md) and select the target chassis size, motor voltage, and battery chemistry.
-2. Keep a multimeter, eye protection, a fuse holder, and a reachable master power switch in the build area.
-3. Create a wiring diagram before connecting a battery. Record the motor’s stall current and choose a driver and fuse rated above it.
-4. Never power motors from the Pi. The Pi is the high-level brain; the ESP32 and motor driver are the motion boundary.
+Install Raspberry Pi OS 64-bit, Wi-Fi, SSH, Python, Git, and this project. Develop from macOS with SSH. Add an LLM client and text chat loop.
 
-**Exit check:** a written power/wiring diagram identifies every supply rail, common ground point, fuse, switch, and connector.
+**Demonstrate:** typed `hello` from the Mac receives a response from the application running on the Pi.
 
-## Stage 1 — Pi brain on the desk
+## 2. Hearing and speech
 
-Buy only: Raspberry Pi 5 (the shared chat settles on 4 GB for the initial POC), official 27 W USB-C supply, active cooler, and 64 GB+ microSD card.
+Add a USB microphone and powered speaker. Build speech-to-text → agent → text-to-speech and make speech interruption cancel playback before listening again.
 
-1. Flash current Raspberry Pi OS 64-bit using Raspberry Pi Imager.
-2. In Imager, configure a hostname, Wi-Fi, locale, user account, and SSH access.
-3. Install the active cooler, boot the Pi, and update it: `sudo apt update && sudo apt full-upgrade -y`.
-4. From the Mac, SSH to the Pi and clone this repository.
-5. Create the virtual environment and run `python3 -m bertrobo doctor`.
-6. Confirm network connectivity and a clean reboot.
+**Demonstrate:** ask a spoken question and hear the answer; interrupt it mid-answer and receive a fresh response.
 
-**Exit check:** the Pi can be reached by SSH from the Mac after reboot and runs the project’s `doctor` command.
+## 3. Vision
 
-## Stage 2 — Software skeleton and remote workflow
+Connect Camera Module 3, validate capture, then add person, face, and basic object detection. Keep this desk-mounted and independent of movement.
 
-1. Develop on macOS with Git and VS Code; run hardware-facing code on the Pi through SSH.
-2. Run `python3 -m bertrobo demo`; it must only emit simulated serial commands.
-3. Run tests with `python3 -m pytest`.
-4. Add configuration for host name, serial port, camera, and sensors only after each device is physically verified.
-5. Keep cloud-model credentials in environment variables or a local untracked `.env` file, never in Git.
+**Demonstrate:** report person presence/location and answer a basic visual question about a held object.
 
-**Exit check:** all tests pass and the code operates without hardware connected.
+## 4. Memory
 
-## Stage 3 — Motion base and ESP32
+Implement short-term conversation context, persistent user facts, events, and a structured world state (`people`, `objects`, `rooms`, `events`, `relationships`). Retrieve memories by relevance and recency.
 
-Buy: chassis, geared motors (prefer encoders), wheels/caster, ESP32 dev board, motor driver matched to motor stall current, motor battery, buck converter, fuse, switch, wire, connectors, and mounting hardware.
+**Demonstrate:** store a fact, restart the program, and correctly recall it later.
 
-1. Assemble the chassis mechanically with the battery disconnected.
-2. Wire the ESP32 to the motor driver; keep the Pi out of the motor-power path.
-3. Implement ESP32 firmware that accepts only valid `DRIVE <direction> <speed>` commands, caps PWM, and stops on malformed input.
-4. Add a short command watchdog in ESP32 firmware that returns both motors to STOP when commands stop arriving.
-5. Connect Pi ↔ ESP32 by USB serial and validate the `DRIVE` protocol with the wheels off the floor.
-6. Test forward, reverse, left, right, stop, USB disconnect, Pi process crash, and master switch.
+## 5. Personality and face
 
-**Exit check:** every failure case stops the motors, including unplugging the Pi or terminating the Pi process.
+Add a 5-inch display, ESP32-S3, two micro servos, and pan/tilt mount. Map behavior states—not LLM animation frames—to face animations, sound, and head movement.
 
-## Stage 4 — Sensors and perception
+**Demonstrate:** the robot tracks a person laterally, shows thinking while processing, and changes expression while responding.
 
-Buy/integrate one at a time: ToF distance sensor, bumper switches, camera module, then microphone/speaker.
+## 6. Mobile body
 
-1. Enable I²C and scan for the first distance sensor; confirm its measured range while stationary.
-2. Add bumper switches as a hardware-adjacent stop condition.
-3. Attach and validate the Pi Camera Module with a simple local capture test.
-4. Add microphone input and speaker output, then test an offline record/playback loop.
-5. Expose each device through a small adapter module and test it independently before joining it to behavior logic.
+Add chassis, encoder motors, wheels, caster, motor driver, battery, buck converter, fuse, and master switch. Pi communicates by USB serial. ESP32 validates commands, controls PWM/encoders, and stops on timeout. Test with wheels lifted before a supervised floor test.
 
-**Exit check:** each sensor/camera/audio component has a standalone smoke test and a documented connector/pin assignment.
+**Demonstrate:** reliable forward motion, turn, and stop from approved high-level commands; unplugging the Pi stops motors.
 
-## Stage 5 — Behaviors and agent layer
+## 7. Spatial awareness
 
-1. Start with deterministic behaviors: manual low-speed driving, obstacle stop, turn toward a detected target, and scripted speech.
-2. Build the high-level control loop so perception suggests actions; a safety layer validates every action before it reaches the drive controller.
-3. If using an LLM, limit it to intents such as `greet`, `look_at`, or `move_forward` with explicit arguments. Do not give it unrestricted raw motor access.
-4. Add telemetry: last drive command, battery voltage, sensor distances, command timeouts, and errors.
-5. Only introduce autonomous movement after repeatable supervised tests on a clear floor.
+Add three ToF sensors, IMU, and bumper switches. Introduce a safety controller between requested movement and the ESP32 command channel.
 
-**Exit check:** the robot demonstrates a supervised scripted interaction and stops safely whenever its sensor or command link fails.
+**Demonstrate:** an obstacle or bumper prevents a requested movement from continuing.
 
-## First-day commands
+## 8. Autonomous behaviors
 
-Run these from the project root after cloning on a Pi:
+Combine world state from vision, speech, memory, and sensors with a goal planner and behavior engine. Actions remain semantic: talk, look, move, wait, or ask for help.
 
-```sh
-sudo apt update && sudo apt full-upgrade -y
-sudo apt install -y python3-venv python3-pip git
-python3 -m venv .venv
-.venv/bin/python -m pip install -e '.[dev]'
-.venv/bin/python -m bertrobo doctor
-.venv/bin/python -m bertrobo demo
-.venv/bin/python -m pytest
-```
+**Demonstrate:** recognize an arriving known person, retrieve context, look toward them, express an appropriate emotion, and greet them without scripting each low-level action.
 
-The starter protocol is intentionally inspectable:
+## 9. Navigation
 
-```text
-DRIVE forward 25
-DRIVE left 30
-DRIVE stop 0
-```
+Only after safety and behavior work, evaluate LiDAR/depth, SLAM, ROS2, maps, and a charging dock.
 
-The ESP32 must treat `stop` and any timeout as authoritative and must not resume motion without a fresh valid command.
+**Demonstrate:** autonomous room-to-room navigation to a named location.
+
+## 10. Product prototype
+
+Replace breadboards and generic chassis with a custom enclosure, integrated power management, consolidated electronics/PCB, and manufacturing-oriented design.
+
+**Demonstrate:** a repeatable, maintainable prototype that preserves the proven companion experience.
+
+## Core prototype budget
+
+The intended core POC is approximately $400–500: brain (~$145), hearing/speech (~$40), vision (~$35), face/head (~$75), movement (~$125), and spatial sensing (~$50). Treat these as planning ranges, not current prices.

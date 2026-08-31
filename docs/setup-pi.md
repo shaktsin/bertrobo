@@ -22,6 +22,17 @@ python3 -m venv .venv
 .venv/bin/python -m pytest
 ```
 
+## Stage 1 LLM chat
+
+In the Pi shell, set the API key for the current session. Do not add it to Git or paste it into source files:
+
+```sh
+export OPENAI_API_KEY="your_api_key"
+.venv/bin/python -m bertrobo chat
+```
+
+Enter `hello` and verify that BertRobo returns a text response. Use `quit` to leave. `BERTROBO_MODEL` optionally selects a different compatible model; it defaults to `gpt-5-mini`.
+
 ## 3. Test in this order
 
 1. Run `bertrobo demo` on the Mac or Pi; it is simulation-only.
