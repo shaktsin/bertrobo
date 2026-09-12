@@ -105,4 +105,4 @@ def test_voice_session_accepts_a_normalized_wake_phrase() -> None:
 
     voice = VoiceSession(ChatSession(FakeClient()), FakeAudio(), WakePhraseAI())
 
-    assert voice.wait_for_wake_phrase("hey bertrobo")
+    assert voice.wait_for_wake_phrase("hey bert")

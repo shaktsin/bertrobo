@@ -79,7 +79,7 @@ def run_voice() -> None:
         print(f"Configuration error: {error}")
         return
 
-    wake_phrase = os.environ.get("BERTROBO_WAKE_PHRASE", "hey bertrobo")
+    wake_phrase = os.environ.get("BERTROBO_WAKE_PHRASE", "hey bert")
     print(
         f'BertRobo voice chat. Say "{wake_phrase}" to begin; '
         "press Ctrl-C to exit."

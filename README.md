@@ -56,7 +56,7 @@ export BERTROBO_PLAYBACK_DEVICE="plughw:2,0"
 
 Find device numbers with `arecord -l` (microphone) and `aplay -l` (speaker). These values can change if USB devices are unplugged or connected in a different order.
 
-BertRobo waits silently for the wake phrase `hey bertrobo` (case-insensitive). Say the phrase, wait for the spoken “Yes?”, then give your request—no keyboard input required. It stops listening while speaking, then returns to wake-phrase mode. Press Ctrl-C to exit.
+BertRobo waits silently for the wake phrase `hey bert` (case-insensitive). Say the phrase, wait for the spoken “Yes?”, then give your request—no keyboard input required. It stops listening while speaking, then returns to wake-phrase mode. Press Ctrl-C to exit.
 
 Change the wake phrase if you prefer:
 
