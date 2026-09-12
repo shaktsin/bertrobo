@@ -56,7 +56,15 @@ export BERTROBO_PLAYBACK_DEVICE="plughw:2,0"
 
 Find device numbers with `arecord -l` (microphone) and `aplay -l` (speaker). These values can change if USB devices are unplugged or connected in a different order.
 
-BertRobo records five-second windows while it is idle, ignores quiet audio locally, and responds whenever it detects speech—no keyboard input required. It stops listening while speaking, then resumes automatically. Press Ctrl-C to exit. If normal room noise causes false activations, raise the local detector threshold, for example `export BERTROBO_SPEECH_RMS_THRESHOLD=700` (default: `400`). True speak-over interruption/echo cancellation is intentionally deferred until full-duplex audio has been verified.
+BertRobo waits silently for the wake phrase `hey bertrobo` (case-insensitive). Say the phrase, wait for the spoken “Yes?”, then give your request—no keyboard input required. It stops listening while speaking, then returns to wake-phrase mode. Press Ctrl-C to exit.
+
+Change the wake phrase if you prefer:
+
+```sh
+export BERTROBO_WAKE_PHRASE="hello bert"
+```
+
+The first wake-phrase version uses speech transcription after local speech detection; quiet audio is ignored locally. If normal room noise causes false activation attempts, raise the detector threshold, for example `export BERTROBO_SPEECH_RMS_THRESHOLD=700` (default: `400`). A future offline wake-word engine and true speak-over interruption/echo cancellation will make this faster and avoid transcription attempts from unrelated speech.
 
 For Pi installation and the hardware checklist, see [docs/setup-pi.md](docs/setup-pi.md) and [docs/hardware.md](docs/hardware.md). The project’s canonical [design](docs/design.md), [goals](docs/goals.md), and [10-stage implementation plan](docs/implementation-plan.md) define the build order. The complete source conversation remains in [docs/shared-chat-transcript.md](docs/shared-chat-transcript.md).
 

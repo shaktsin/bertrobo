@@ -96,3 +96,13 @@ def test_alsa_audio_detects_speech_level_audio(tmp_path) -> None:
 
     assert AlsaAudio(speech_rms_threshold=400).has_speech(recording)
     assert not AlsaAudio(speech_rms_threshold=1_100).has_speech(recording)
+
+
+def test_voice_session_accepts_a_normalized_wake_phrase() -> None:
+    class WakePhraseAI(FakeAudioAI):
+        def transcribe(self, audio_path) -> str:
+            return "Hey Bert Robo"
+
+    voice = VoiceSession(ChatSession(FakeClient()), FakeAudio(), WakePhraseAI())
+
+    assert voice.wait_for_wake_phrase("hey bertrobo")

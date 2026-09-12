@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import platform
 
 from .chat import ChatSession, ConfigurationError, OpenAIResponsesClient
@@ -78,14 +79,20 @@ def run_voice() -> None:
         print(f"Configuration error: {error}")
         return
 
-    print("BertRobo voice chat. Listening hands-free; press Ctrl-C to exit.")
+    wake_phrase = os.environ.get("BERTROBO_WAKE_PHRASE", "hey bertrobo")
+    print(
+        f'BertRobo voice chat. Say "{wake_phrase}" to begin; '
+        "press Ctrl-C to exit."
+    )
     while True:
         try:
-            print("Listening for 5 seconds...")
-            result = session.take_turn_if_speech()
-            if result:
-                transcript, reply = result
-                print(f"You: {transcript}\nBertRobo: {reply}")
+            if not session.wait_for_wake_phrase(wake_phrase):
+                continue
+            print("BertRobo: Yes?")
+            session.say("Yes?")
+            print("Listening for your request...")
+            transcript, reply = session.take_turn()
+            print(f"You: {transcript}\nBertRobo: {reply}")
         except RuntimeError as error:
             print(f"BertRobo: Voice turn failed: {error}")
         except KeyboardInterrupt:

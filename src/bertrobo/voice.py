@@ -164,6 +164,27 @@ class VoiceSession:
                 return None
             return self._reply_to_recording(recording, root)
 
+    def wait_for_wake_phrase(self, wake_phrase: str) -> bool:
+        """Listen for one spoken wake phrase without adding it to chat history."""
+        normalized_phrase = self._normalize_phrase(wake_phrase)
+        if not normalized_phrase:
+            raise ValueError("wake_phrase must contain letters or numbers")
+
+        with tempfile.TemporaryDirectory(prefix="bertrobo-wake-") as directory:
+            recording = Path(directory) / "wake.wav"
+            self._audio.record(recording)
+            if not self._audio.has_speech(recording):
+                return False
+            transcript = self._ai_audio.transcribe(recording)
+            return normalized_phrase in self._normalize_phrase(transcript)
+
+    def say(self, text: str) -> None:
+        """Speak a short acknowledgement without changing chat history."""
+        with tempfile.TemporaryDirectory(prefix="bertrobo-voice-") as directory:
+            reply_audio = Path(directory) / "acknowledgement.wav"
+            self._ai_audio.synthesize(text, reply_audio)
+            self._audio.play(reply_audio)
+
     def _reply_to_recording(self, recording: Path, root: Path) -> tuple[str, str]:
         reply_audio = root / "reply.wav"
         transcript = self._ai_audio.transcribe(recording)
@@ -173,3 +194,7 @@ class VoiceSession:
         self._ai_audio.synthesize(reply, reply_audio)
         self._audio.play(reply_audio)
         return transcript, reply
+
+    @staticmethod
+    def _normalize_phrase(text: str) -> str:
+        return "".join(character for character in text.casefold() if character.isalnum())
