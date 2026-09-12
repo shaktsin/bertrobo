@@ -6,6 +6,8 @@ import os
 import shutil
 import subprocess
 import tempfile
+import wave
+from math import isqrt
 from pathlib import Path
 from typing import Protocol
 
@@ -70,12 +72,16 @@ class AlsaAudio:
         capture_seconds: int = 5,
         capture_device: str | None = None,
         playback_device: str | None = None,
+        speech_rms_threshold: int | None = None,
     ) -> None:
         if capture_seconds <= 0:
             raise ValueError("capture_seconds must be positive")
         self.capture_seconds = capture_seconds
         self.capture_device = capture_device or os.environ.get("BERTROBO_CAPTURE_DEVICE")
         self.playback_device = playback_device or os.environ.get("BERTROBO_PLAYBACK_DEVICE")
+        self.speech_rms_threshold = speech_rms_threshold or int(
+            os.environ.get("BERTROBO_SPEECH_RMS_THRESHOLD", "400")
+        )
 
     def check_available(self) -> None:
         missing = [command for command in ("arecord", "aplay") if shutil.which(command) is None]
@@ -119,6 +125,19 @@ class AlsaAudio:
         except subprocess.CalledProcessError as error:
             raise RuntimeError(error.stderr.strip() or "audio playback failed") from error
 
+    def has_speech(self, audio_path: Path) -> bool:
+        """Return whether a 16-bit mono WAV contains speech-level sound."""
+        with wave.open(str(audio_path), "rb") as recording:
+            if recording.getsampwidth() != 2 or recording.getnchannels() != 1:
+                raise RuntimeError("expected a 16-bit mono WAV recording")
+            frames = recording.readframes(recording.getnframes())
+
+        if not frames:
+            return False
+        samples = memoryview(frames).cast("h")
+        mean_square = sum(sample * sample for sample in samples) // len(samples)
+        return isqrt(mean_square) >= self.speech_rms_threshold
+
 
 class VoiceSession:
     """One spoken turn: record → transcribe → chat → synthesize → play."""
@@ -132,12 +151,25 @@ class VoiceSession:
         with tempfile.TemporaryDirectory(prefix="bertrobo-voice-") as directory:
             root = Path(directory)
             recording = root / "input.wav"
-            reply_audio = root / "reply.wav"
             self._audio.record(recording)
-            transcript = self._ai_audio.transcribe(recording)
-            if not transcript:
-                raise RuntimeError("I couldn't hear any speech; try again closer to the microphone")
-            reply = self._chat.reply(transcript)
-            self._ai_audio.synthesize(reply, reply_audio)
-            self._audio.play(reply_audio)
-            return transcript, reply
+            return self._reply_to_recording(recording, root)
+
+    def take_turn_if_speech(self) -> tuple[str, str] | None:
+        """Record one hands-free turn, skipping silence before any API request."""
+        with tempfile.TemporaryDirectory(prefix="bertrobo-voice-") as directory:
+            root = Path(directory)
+            recording = root / "input.wav"
+            self._audio.record(recording)
+            if not self._audio.has_speech(recording):
+                return None
+            return self._reply_to_recording(recording, root)
+
+    def _reply_to_recording(self, recording: Path, root: Path) -> tuple[str, str]:
+        reply_audio = root / "reply.wav"
+        transcript = self._ai_audio.transcribe(recording)
+        if not transcript:
+            raise RuntimeError("I couldn't hear any speech; try again closer to the microphone")
+        reply = self._chat.reply(transcript)
+        self._ai_audio.synthesize(reply, reply_audio)
+        self._audio.play(reply_audio)
+        return transcript, reply

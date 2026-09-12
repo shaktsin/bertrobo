@@ -38,7 +38,7 @@ Type a message, then use `quit` or Ctrl-C to leave. This chat is text-only and h
 
 ## Stage 2 voice chat
 
-Connect a USB microphone and USB-audio speaker, then install the Pi audio tools and start push-to-talk voice mode:
+Connect a USB microphone and USB-audio speaker, then install the Pi audio tools and start hands-free voice mode:
 
 ```sh
 sudo apt install -y alsa-utils
@@ -56,7 +56,7 @@ export BERTROBO_PLAYBACK_DEVICE="plughw:2,0"
 
 Find device numbers with `arecord -l` (microphone) and `aplay -l` (speaker). These values can change if USB devices are unplugged or connected in a different order.
 
-Press Enter, speak for five seconds, and BertRobo will transcribe your voice, answer, and play the answer through the selected USB speaker. The first version uses push-to-talk; automatic voice interruption/echo cancellation is intentionally deferred until the microphone and speaker have been verified together.
+BertRobo records five-second windows while it is idle, ignores quiet audio locally, and responds whenever it detects speech—no keyboard input required. It stops listening while speaking, then resumes automatically. Press Ctrl-C to exit. If normal room noise causes false activations, raise the local detector threshold, for example `export BERTROBO_SPEECH_RMS_THRESHOLD=700` (default: `400`). True speak-over interruption/echo cancellation is intentionally deferred until full-duplex audio has been verified.
 
 For Pi installation and the hardware checklist, see [docs/setup-pi.md](docs/setup-pi.md) and [docs/hardware.md](docs/hardware.md). The project’s canonical [design](docs/design.md), [goals](docs/goals.md), and [10-stage implementation plan](docs/implementation-plan.md) define the build order. The complete source conversation remains in [docs/shared-chat-transcript.md](docs/shared-chat-transcript.md).
 

@@ -65,7 +65,7 @@ def run_chat() -> None:
 
 
 def run_voice() -> None:
-    """Run the Stage 2 push-to-talk voice loop on Raspberry Pi OS."""
+    """Run the Stage 2 hands-free voice loop on Raspberry Pi OS."""
     from .voice import AlsaAudio, OpenAIAudioClient, VoiceSession
 
     try:
@@ -78,25 +78,19 @@ def run_voice() -> None:
         print(f"Configuration error: {error}")
         return
 
-    print("BertRobo voice chat. Press Enter, speak for 5 seconds, or type 'quit'.")
+    print("BertRobo voice chat. Listening hands-free; press Ctrl-C to exit.")
     while True:
         try:
-            command = input("> ").strip().lower()
-        except (EOFError, KeyboardInterrupt):
-            print("\nBertRobo: Goodbye.")
-            return
-        if command in {"quit", "exit"}:
-            print("BertRobo: Goodbye.")
-            return
-        if command:
-            print("Press Enter to take a voice turn, or type 'quit'.")
-            continue
-        try:
             print("Listening for 5 seconds...")
-            transcript, reply = session.take_turn()
-            print(f"You: {transcript}\nBertRobo: {reply}")
+            result = session.take_turn_if_speech()
+            if result:
+                transcript, reply = result
+                print(f"You: {transcript}\nBertRobo: {reply}")
         except RuntimeError as error:
             print(f"BertRobo: Voice turn failed: {error}")
+        except KeyboardInterrupt:
+            print("\nBertRobo: Goodbye.")
+            return
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest.mock import patch
+import wave
 
 from bertrobo.chat import ChatMessage, ChatSession
 from bertrobo.voice import AlsaAudio, VoiceSession
@@ -50,6 +51,9 @@ class FakeAudio:
     def play(self, audio_path) -> None:
         self.played = audio_path.exists()
 
+    def has_speech(self, audio_path) -> bool:
+        return True
+
 
 class FakeAudioAI:
     def transcribe(self, audio_path) -> str:
@@ -80,3 +84,15 @@ def test_alsa_audio_uses_explicit_devices() -> None:
 
     assert run.call_args_list[0].args[0][:3] == ["arecord", "--device", "plughw:3,0"]
     assert run.call_args_list[1].args[0][:3] == ["aplay", "--device", "plughw:2,0"]
+
+
+def test_alsa_audio_detects_speech_level_audio(tmp_path) -> None:
+    recording = tmp_path / "speech.wav"
+    with wave.open(str(recording), "wb") as output:
+        output.setnchannels(1)
+        output.setsampwidth(2)
+        output.setframerate(16_000)
+        output.writeframes((1_000).to_bytes(2, "little", signed=True) * 16_000)
+
+    assert AlsaAudio(speech_rms_threshold=400).has_speech(recording)
+    assert not AlsaAudio(speech_rms_threshold=1_100).has_speech(recording)
