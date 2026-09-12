@@ -10,7 +10,7 @@ Install Raspberry Pi OS 64-bit, Wi-Fi, SSH, Python, Git, and this project. Devel
 
 ## 2. Hearing and speech
 
-Add a USB microphone and powered speaker. Build speech-to-text → agent → text-to-speech and make speech interruption cancel playback before listening again.
+Add a USB microphone and powered USB-audio speaker. Build speech-to-text → agent → text-to-speech. Start with verified push-to-talk, then add automatic interruption after full-duplex audio and echo behavior are verified.
 
 **Demonstrate:** ask a spoken question and hear the answer; interrupt it mid-answer and receive a fresh response.
 

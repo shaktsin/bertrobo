@@ -11,7 +11,7 @@ from .transport import MemoryTransport
 
 def main() -> None:
     parser = argparse.ArgumentParser(prog="bertrobo")
-    parser.add_argument("command", choices=("doctor", "demo", "chat"))
+    parser.add_argument("command", choices=("doctor", "demo", "chat", "voice"))
     args = parser.parse_args()
 
     if args.command == "doctor":
@@ -22,6 +22,10 @@ def main() -> None:
 
     if args.command == "chat":
         run_chat()
+        return
+
+    if args.command == "voice":
+        run_voice()
         return
 
     transport = MemoryTransport()
@@ -58,6 +62,41 @@ def run_chat() -> None:
             print(f"BertRobo: {session.reply(user_text)}")
         except RuntimeError as error:
             print(f"BertRobo: I couldn't reach my language service: {error}")
+
+
+def run_voice() -> None:
+    """Run the Stage 2 push-to-talk voice loop on Raspberry Pi OS."""
+    from .voice import AlsaAudio, OpenAIAudioClient, VoiceSession
+
+    try:
+        session = VoiceSession(
+            ChatSession(OpenAIResponsesClient.from_environment()),
+            AlsaAudio(),
+            OpenAIAudioClient.from_environment(),
+        )
+    except ConfigurationError as error:
+        print(f"Configuration error: {error}")
+        return
+
+    print("BertRobo voice chat. Press Enter, speak for 5 seconds, or type 'quit'.")
+    while True:
+        try:
+            command = input("> ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print("\nBertRobo: Goodbye.")
+            return
+        if command in {"quit", "exit"}:
+            print("BertRobo: Goodbye.")
+            return
+        if command:
+            print("Press Enter to take a voice turn, or type 'quit'.")
+            continue
+        try:
+            print("Listening for 5 seconds...")
+            transcript, reply = session.take_turn()
+            print(f"You: {transcript}\nBertRobo: {reply}")
+        except RuntimeError as error:
+            print(f"BertRobo: Voice turn failed: {error}")
 
 
 if __name__ == "__main__":

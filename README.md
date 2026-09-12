@@ -36,6 +36,18 @@ export BERTROBO_MODEL="gpt-5-mini" # optional; this is the default
 
 Type a message, then use `quit` or Ctrl-C to leave. This chat is text-only and has no access to hardware actions, tools, or persistent memory.
 
+## Stage 2 voice chat
+
+Connect a USB microphone and USB-audio speaker, then install the Pi audio tools and start push-to-talk voice mode:
+
+```sh
+sudo apt install -y alsa-utils
+export OPENAI_API_KEY="your_api_key"
+.venv/bin/python -m bertrobo voice
+```
+
+Press Enter, speak for five seconds, and BertRobo will transcribe your voice, answer, and play the answer through the selected USB speaker. The first version uses push-to-talk; automatic voice interruption/echo cancellation is intentionally deferred until the microphone and speaker have been verified together.
+
 For Pi installation and the hardware checklist, see [docs/setup-pi.md](docs/setup-pi.md) and [docs/hardware.md](docs/hardware.md). The project’s canonical [design](docs/design.md), [goals](docs/goals.md), and [10-stage implementation plan](docs/implementation-plan.md) define the build order. The complete source conversation remains in [docs/shared-chat-transcript.md](docs/shared-chat-transcript.md).
 
 ## Safety boundary

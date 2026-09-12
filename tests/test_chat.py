@@ -1,4 +1,5 @@
 from bertrobo.chat import ChatMessage, ChatSession
+from bertrobo.voice import VoiceSession
 
 
 class FakeClient:
@@ -32,3 +33,36 @@ def test_session_bounds_history() -> None:
     session.reply("two")
 
     assert [message.content for message in client.requests[1]] == ["reply to: one", "two"]
+
+
+class FakeAudio:
+    def __init__(self) -> None:
+        self.recorded = False
+        self.played = False
+
+    def record(self, output_path) -> None:
+        self.recorded = True
+        output_path.write_bytes(b"wav")
+
+    def play(self, audio_path) -> None:
+        self.played = audio_path.exists()
+
+
+class FakeAudioAI:
+    def transcribe(self, audio_path) -> str:
+        assert audio_path.read_bytes() == b"wav"
+        return "hello robot"
+
+    def synthesize(self, text: str, output_path) -> None:
+        assert text == "reply to: hello robot"
+        output_path.write_bytes(b"reply wav")
+
+
+def test_voice_session_runs_full_turn() -> None:
+    mic_and_speaker = FakeAudio()
+    voice = VoiceSession(ChatSession(FakeClient()), mic_and_speaker, FakeAudioAI())
+
+    transcript, reply = voice.take_turn()
+
+    assert (transcript, reply) == ("hello robot", "reply to: hello robot")
+    assert mic_and_speaker.recorded and mic_and_speaker.played
