@@ -7,6 +7,7 @@ import shutil
 import subprocess
 import tempfile
 import wave
+from collections.abc import Callable
 from math import isqrt
 from pathlib import Path
 from typing import Protocol
@@ -88,8 +89,11 @@ class AlsaAudio:
         if missing:
             raise ConfigurationError(f"missing Pi audio utility: {', '.join(missing)}")
 
-    def record(self, output_path: Path) -> None:
+    def record(self, output_path: Path, capture_seconds: int | None = None) -> None:
         self.check_available()
+        seconds = capture_seconds or self.capture_seconds
+        if seconds <= 0:
+            raise ValueError("capture_seconds must be positive")
         command = ["arecord"]
         if self.capture_device:
             command.extend(["--device", self.capture_device])
@@ -99,7 +103,7 @@ class AlsaAudio:
                 "--rate=16000",
                 "--channels=1",
                 "--duration",
-                str(self.capture_seconds),
+                str(seconds),
                 "--file-type=wav",
                 str(output_path),
             ]
@@ -116,14 +120,60 @@ class AlsaAudio:
 
     def play(self, audio_path: Path) -> None:
         self.check_available()
-        command = ["aplay"]
-        if self.playback_device:
-            command.extend(["--device", self.playback_device])
-        command.append(str(audio_path))
+        command = self._play_command(audio_path)
         try:
             subprocess.run(command, check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError as error:
             raise RuntimeError(error.stderr.strip() or "audio playback failed") from error
+
+    def play_until_interrupted(
+        self, audio_path: Path, is_interrupt: Callable[[Path], bool]
+    ) -> bool:
+        """Play audio while checking the microphone for a deliberate interrupt.
+
+        Returns True after stopping playback for an interrupt, otherwise False.
+        """
+        self.check_available()
+        process = subprocess.Popen(
+            self._play_command(audio_path),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            with tempfile.TemporaryDirectory(prefix="bertrobo-interrupt-") as directory:
+                root = Path(directory)
+                chunk_number = 0
+                while process.poll() is None:
+                    chunk = root / f"interrupt-{chunk_number}.wav"
+                    chunk_number += 1
+                    self.record(chunk, capture_seconds=1)
+                    if (
+                        process.poll() is None
+                        and self.has_speech(chunk)
+                        and is_interrupt(chunk)
+                    ):
+                        process.terminate()
+                        process.wait(timeout=2)
+                        return True
+
+            exit_code = process.wait()
+            if exit_code:
+                error = process.stderr.read().strip() if process.stderr else ""
+                raise RuntimeError(error or "audio playback failed")
+            return False
+        except BaseException:
+            if process.poll() is None:
+                process.terminate()
+                process.wait(timeout=2)
+            raise
+
+    def _play_command(self, audio_path: Path) -> list[str]:
+        command = ["aplay"]
+        if self.playback_device:
+            command.extend(["--device", self.playback_device])
+        command.append(str(audio_path))
+        return command
 
     def has_speech(self, audio_path: Path) -> bool:
         """Return whether a 16-bit mono WAV contains speech-level sound."""
@@ -146,6 +196,7 @@ class VoiceSession:
         self._chat = chat
         self._audio = audio
         self._ai_audio = ai_audio
+        self.reply_interrupted = False
 
     def take_turn(self) -> tuple[str, str]:
         with tempfile.TemporaryDirectory(prefix="bertrobo-voice-") as directory:
@@ -192,8 +243,15 @@ class VoiceSession:
             raise RuntimeError("I couldn't hear any speech; try again closer to the microphone")
         reply = self._chat.reply(transcript)
         self._ai_audio.synthesize(reply, reply_audio)
-        self._audio.play(reply_audio)
+        wake_phrase = os.environ.get("BERTROBO_WAKE_PHRASE", "hey bert")
+        self.reply_interrupted = self._audio.play_until_interrupted(
+            reply_audio, lambda chunk: self._is_wake_phrase(chunk, wake_phrase)
+        )
         return transcript, reply
+
+    def _is_wake_phrase(self, audio_path: Path, wake_phrase: str) -> bool:
+        transcript = self._ai_audio.transcribe(audio_path)
+        return self._normalize_phrase(wake_phrase) in self._normalize_phrase(transcript)
 
     @staticmethod
     def _normalize_phrase(text: str) -> str:

@@ -93,6 +93,12 @@ def run_voice() -> None:
             print("Listening for your request...")
             transcript, reply = session.take_turn()
             print(f"You: {transcript}\nBertRobo: {reply}")
+            while session.reply_interrupted:
+                print("BertRobo: Interrupted. Yes?")
+                session.say("Yes?")
+                print("Listening for your new request...")
+                transcript, reply = session.take_turn()
+                print(f"You: {transcript}\nBertRobo: {reply}")
         except RuntimeError as error:
             print(f"BertRobo: Voice turn failed: {error}")
         except KeyboardInterrupt:

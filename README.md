@@ -66,6 +66,10 @@ export BERTROBO_WAKE_PHRASE="hello bert"
 
 The first wake-phrase version uses speech transcription after local speech detection; quiet audio is ignored locally. If normal room noise causes false activation attempts, raise the detector threshold, for example `export BERTROBO_SPEECH_RMS_THRESHOLD=700` (default: `400`). A future offline wake-word engine and true speak-over interruption/echo cancellation will make this faster and avoid transcription attempts from unrelated speech.
 
+### Interrupt a reply
+
+While BertRobo is talking, say `hey bert`. It checks one-second microphone chunks during playback, stops the reply when that phrase is recognized, says “Yes?”, and waits for your new request. This deliberate wake phrase avoids most accidental interruptions and reduces speaker-echo problems; it is not full acoustic echo cancellation. Test it with a long response, then say `hey bert` from close to the microphone while it is speaking.
+
 For Pi installation and the hardware checklist, see [docs/setup-pi.md](docs/setup-pi.md) and [docs/hardware.md](docs/hardware.md). The project’s canonical [design](docs/design.md), [goals](docs/goals.md), and [10-stage implementation plan](docs/implementation-plan.md) define the build order. The complete source conversation remains in [docs/shared-chat-transcript.md](docs/shared-chat-transcript.md).
 
 ## Safety boundary

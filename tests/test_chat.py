@@ -1,5 +1,6 @@
 from pathlib import Path
 from unittest.mock import patch
+from unittest.mock import Mock
 import wave
 
 from bertrobo.chat import ChatMessage, ChatSession
@@ -54,6 +55,10 @@ class FakeAudio:
     def has_speech(self, audio_path) -> bool:
         return True
 
+    def play_until_interrupted(self, audio_path, is_interrupt) -> bool:
+        self.play(audio_path)
+        return False
+
 
 class FakeAudioAI:
     def transcribe(self, audio_path) -> str:
@@ -106,3 +111,22 @@ def test_voice_session_accepts_a_normalized_wake_phrase() -> None:
     voice = VoiceSession(ChatSession(FakeClient()), FakeAudio(), WakePhraseAI())
 
     assert voice.wait_for_wake_phrase("hey bert")
+
+
+def test_alsa_audio_stops_playback_for_an_interrupt() -> None:
+    audio = AlsaAudio()
+    player = Mock()
+    player.poll.return_value = None
+    player.wait.return_value = 0
+
+    with (
+        patch.object(audio, "check_available"),
+        patch.object(audio, "record") as record,
+        patch.object(audio, "has_speech", return_value=True),
+        patch("bertrobo.voice.subprocess.Popen", return_value=player),
+    ):
+        assert audio.play_until_interrupted(Path("/tmp/reply.wav"), lambda _: True)
+
+    record.assert_called_once()
+    assert record.call_args.kwargs["capture_seconds"] == 1
+    player.terminate.assert_called_once()
