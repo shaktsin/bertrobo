@@ -46,6 +46,16 @@ export OPENAI_API_KEY="your_api_key"
 .venv/bin/python -m bertrobo voice
 ```
 
+If the Pi's ALSA `default` device is not configured for both microphone input and speaker output, select the USB devices explicitly. For the USB microphone and CA-2110USB speaker currently used by this project:
+
+```sh
+export BERTROBO_CAPTURE_DEVICE="plughw:3,0"
+export BERTROBO_PLAYBACK_DEVICE="plughw:2,0"
+.venv/bin/python -m bertrobo voice
+```
+
+Find device numbers with `arecord -l` (microphone) and `aplay -l` (speaker). These values can change if USB devices are unplugged or connected in a different order.
+
 Press Enter, speak for five seconds, and BertRobo will transcribe your voice, answer, and play the answer through the selected USB speaker. The first version uses push-to-talk; automatic voice interruption/echo cancellation is intentionally deferred until the microphone and speaker have been verified together.
 
 For Pi installation and the hardware checklist, see [docs/setup-pi.md](docs/setup-pi.md) and [docs/hardware.md](docs/hardware.md). The project’s canonical [design](docs/design.md), [goals](docs/goals.md), and [10-stage implementation plan](docs/implementation-plan.md) define the build order. The complete source conversation remains in [docs/shared-chat-transcript.md](docs/shared-chat-transcript.md).

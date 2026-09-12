@@ -1,5 +1,8 @@
+from pathlib import Path
+from unittest.mock import patch
+
 from bertrobo.chat import ChatMessage, ChatSession
-from bertrobo.voice import VoiceSession
+from bertrobo.voice import AlsaAudio, VoiceSession
 
 
 class FakeClient:
@@ -66,3 +69,14 @@ def test_voice_session_runs_full_turn() -> None:
 
     assert (transcript, reply) == ("hello robot", "reply to: hello robot")
     assert mic_and_speaker.recorded and mic_and_speaker.played
+
+
+def test_alsa_audio_uses_explicit_devices() -> None:
+    audio = AlsaAudio(capture_device="plughw:3,0", playback_device="plughw:2,0")
+
+    with patch.object(audio, "check_available"), patch("bertrobo.voice.subprocess.run") as run:
+        audio.record(Path("/tmp/input.wav"))
+        audio.play(Path("/tmp/reply.wav"))
+
+    assert run.call_args_list[0].args[0][:3] == ["arecord", "--device", "plughw:3,0"]
+    assert run.call_args_list[1].args[0][:3] == ["aplay", "--device", "plughw:2,0"]

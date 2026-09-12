@@ -65,10 +65,17 @@ class OpenAIAudioClient:
 class AlsaAudio:
     """Record and play WAV audio using Pi OS's arecord and aplay utilities."""
 
-    def __init__(self, capture_seconds: int = 5) -> None:
+    def __init__(
+        self,
+        capture_seconds: int = 5,
+        capture_device: str | None = None,
+        playback_device: str | None = None,
+    ) -> None:
         if capture_seconds <= 0:
             raise ValueError("capture_seconds must be positive")
         self.capture_seconds = capture_seconds
+        self.capture_device = capture_device or os.environ.get("BERTROBO_CAPTURE_DEVICE")
+        self.playback_device = playback_device or os.environ.get("BERTROBO_PLAYBACK_DEVICE")
 
     def check_available(self) -> None:
         missing = [command for command in ("arecord", "aplay") if shutil.which(command) is None]
@@ -77,9 +84,23 @@ class AlsaAudio:
 
     def record(self, output_path: Path) -> None:
         self.check_available()
+        command = ["arecord"]
+        if self.capture_device:
+            command.extend(["--device", self.capture_device])
+        command.extend(
+            [
+                "--format=S16_LE",
+                "--rate=16000",
+                "--channels=1",
+                "--duration",
+                str(self.capture_seconds),
+                "--file-type=wav",
+                str(output_path),
+            ]
+        )
         try:
             subprocess.run(
-                ["arecord", "--format=S16_LE", "--rate=16000", "--channels=1", "--duration", str(self.capture_seconds), "--file-type=wav", str(output_path)],
+                command,
                 check=True,
                 capture_output=True,
                 text=True,
@@ -89,8 +110,12 @@ class AlsaAudio:
 
     def play(self, audio_path: Path) -> None:
         self.check_available()
+        command = ["aplay"]
+        if self.playback_device:
+            command.extend(["--device", self.playback_device])
+        command.append(str(audio_path))
         try:
-            subprocess.run(["aplay", str(audio_path)], check=True, capture_output=True, text=True)
+            subprocess.run(command, check=True, capture_output=True, text=True)
         except subprocess.CalledProcessError as error:
             raise RuntimeError(error.stderr.strip() or "audio playback failed") from error
 
